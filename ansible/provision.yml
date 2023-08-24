@@ -1,0 +1,74 @@
+- name: install deps to server
+  hosts: opvpn
+  become: true
+
+  tasks:
+  - name: Install packages
+    ansible.builtin.yum:
+      name: "{{ item }}"
+      state: present
+      update_cache: true
+    loop:
+      - epel-release
+      - openvpn
+      - iperf3
+      - nano
+
+- name: Disable selinux on server
+  hosts: server
+  become: true
+  tasks:
+
+  - name: Disable selinux on server
+    ansible.builtin.shell: setenforce 0
+
+- name: Configure SERVER with openvpn
+  hosts: server
+  become: true
+  tasks:
+
+  - name: Generate openvpn key
+    ansible.builtin.shell: openvpn --genkey --secret /etc/openvpn/static.key
+
+  - name: Create openvpn server configfile
+    ansible.builtin.file:
+      path: /etc/openvpn/server.conf
+      state: touch
+      mode: 0644
+
+  - name: Add configfile for server
+    ansible.builtin.copy:
+      src: "etc/server.conf"
+      dest: /etc/openvpn/server.conf
+      mode: 0644
+
+  - name: Enable openvpn server
+    ansible.builtin.service:
+      name: openvpn@server
+      state: started
+      enabled: true
+
+- name: Configure CLIENT with openvpn
+  hosts: client
+  become: true
+  tasks:
+
+  - name: Create openvpn client configfile
+    ansible.builtin.file:
+      path: /etc/openvpn/server.conf
+      state: touch
+      mode: 0644
+
+  - name: Add configfile for client
+    ansible.builtin.copy:
+      src: "etc/client.conf"
+      dest: /etc/openvpn/server.conf
+      mode: 0644
+
+  - name: Enable openvpn server
+    ansible.builtin.service:
+      name: openvpn@server
+      state: started
+      enabled: true
+
+
