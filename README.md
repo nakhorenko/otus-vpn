@@ -108,3 +108,57 @@ iperf3: interrupt - the client has terminated
 ```
 </details>
 Как мне это видится, режим tap чуть шустрее из-за более высокой пропускной способности.
+
+### RAS на базе OpenVPN
+
+```
+~/Linux-2022-12/otus-vpn# vagrant up
+```
+Попытка пингануть внутренний IP адрес сервера в туннеле:
+
+```
+~/Linux-2022-12/otus-vpn# ping -c 4 10.10.10.1
+PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
+^C
+--- 10.10.10.1 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss, time 1005ms
+```
+сервер не отвечает.
+
+После этого на хосте выполняем
+
+```
+~/Linux-2022-12/otus-vpn# openvpn --config client.conf
+```
+и повторяем попытку
+
+```
+~/Linux-2022-12/otus-vpn# ping -c 4 10.10.10.1
+PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
+64 bytes from 10.10.10.1: icmp_seq=1 ttl=64 time=0.502 ms
+64 bytes from 10.10.10.1: icmp_seq=2 ttl=64 time=1.33 ms
+64 bytes from 10.10.10.1: icmp_seq=3 ttl=64 time=1.21 ms
+64 bytes from 10.10.10.1: icmp_seq=4 ttl=64 time=1.34 ms
+--- 10.10.10.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3018ms
+rtt min/avg/max/mdev = 0.502/1.097/1.344/0.347 ms
+```
+Также проверяем командой ip r (netstat -rn) на хостовой машине
+что сеть туннеля импортирована в таблицу маршрутизации.
+
+```
+~/Linux-2022-12/otus-vpn# netstat -rn
+Destination Gateway Genmask Flags MSS Window irtt Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG        0 0          0 wlp0s20f3
+10.10.10.0      10.10.10.5      255.255.255.0   UG        0 0          0 tun0
+10.10.10.5      0.0.0.0         255.255.255.255 UH        0 0          0 tun0
+169.254.0.0     0.0.0.0         255.255.0.0     U         0 0          0 wlp0s20f3
+172.17.0.0      0.0.0.0         255.255.0.0     U         0 0          0 docker0
+192.168.1.0     0.0.0.0         255.255.255.0   U         0 0          0 wlp0s20f3
+192.168.20.0    0.0.0.0         255.255.255.0   U         0 0          0 vboxnet5
+192.168.30.0    0.0.0.0         255.255.255.0   U         0 0          0 vboxnet4
+192.168.40.0    0.0.0.0         255.255.255.0   U         0 0          0 vboxnet3
+192.168.50.0    0.0.0.0         255.255.255.0   U         0 0          0 vboxnet2
+192.168.56.0    0.0.0.0         255.255.255.0   U         0 0          0 vboxnet0
+```
+
