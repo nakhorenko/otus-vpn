@@ -1,0 +1,63 @@
+- name: VPN
+  hosts: all
+  become: yes
+
+  tasks:
+
+  - name: install epel-release on CentOS
+    ansible.builtin.yum:
+      name: epel-release
+      state: present
+
+  - name: install softs on CentOS
+    ansible.builtin.yum:
+      name:
+        - nano
+        - openvpn
+        - iperf3
+      state: present
+
+  - name: Disable SELinux
+    selinux:
+      state: disabled
+
+  - name: configure server vpn
+    block:
+      - name: openvpn genkey
+        shell: openvpn --genkey --secret /etc/openvpn/static.key
+
+      - name: fetch static.key openvpn
+        fetch:
+          src: /etc/openvpn/static.key
+          dest: /home/nakhorenko/Linux-2022-12/otus-vpn/static.key
+
+      - name: copy server.conf server
+        template:
+          src: server.conf
+          dest: /etc/openvpn/server.conf
+    when: (ansible_hostname == "server")
+
+
+  - name: conf client vpn
+    block:
+      - name: copy server.conf client
+        template:
+          src: server_1.conf
+          dest: /etc/openvpn/server.conf
+
+      - name: copy static.key to client
+        template:
+          src: /home/nakhorenko/Linux-2022-12/otus-vpn/static.key/server/etc/openvpn/static.key
+          dest: /etc/openvpn/static.key
+    when: (ansible_hostname == "client")
+
+  - name: service unit openvpn
+    template:
+      src: openvpn@.service
+      dest: /etc/systemd/system/openvpn@.service
+
+  - name: start openvpn@server
+    service:
+      name: openvpn@server
+      state: started
+      enabled: true
